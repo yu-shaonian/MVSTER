@@ -10,32 +10,33 @@ from datasets import find_dataset_def
 from models import *
 from utils import *
 import torch.distributed as dist
+# 这个代码非常重要，分布式训练这块还需要仔细研究下
 
 cudnn.benchmark = True
 
 parser = argparse.ArgumentParser(description='A PyTorch Implementation of MVSTER')
 parser.add_argument('--mode', default='train', help='train or test', choices=['train', 'test', 'profile'])
-parser.add_argument('--device', default='cuda', help='select model')
+parser.add_argument('--device', default='cuda:0', help='select model')
 
 parser.add_argument('--dataset', default='dtu_yao4', help='select dataset')
-parser.add_argument('--trainpath', help='train datapath')
+parser.add_argument('--trainpath', default='/home/leiguojun/data/mvs_training/dtu',help='train datapath')
 parser.add_argument('--testpath', help='test datapath')
-parser.add_argument('--trainlist', help='train list')
-parser.add_argument('--testlist', help='test list')
+parser.add_argument('--trainlist',default='lists/dtu/train.txt', help='train list')
+parser.add_argument('--testlist', default='lists/dtu/test.txt',help='test list')
 
 parser.add_argument('--epochs', type=int, default=10, help='number of epochs to train')
 parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
 parser.add_argument('--lrepochs', type=str, default="6,8,9:2", help='epoch ids to downscale lr and the downscale rate')
 parser.add_argument('--wd', type=float, default=0.0, help='weight decay')
 
-parser.add_argument('--batch_size', type=int, default=1, help='train batch size')
+parser.add_argument('--batch_size', type=int, default=4, help='train batch size')
 parser.add_argument('--interval_scale', type=float, default=1.06, help='the number of depth values')
 
 parser.add_argument('--loadckpt', default=None, help='load a specific checkpoint')
-parser.add_argument('--logdir', default='./checkpoints/debug', help='the directory to save checkpoints/logs')
+parser.add_argument('--logdir', default='./checkpoints/train8', help='the directory to save checkpoints/logs')
 parser.add_argument('--resume', action='store_true', help='continue to train the model')
 
-parser.add_argument('--summary_freq', type=int, default=2, help='print and summary frequency')
+parser.add_argument('--summary_freq', type=int, default=100, help='print and summary frequency')
 parser.add_argument('--save_freq', type=int, default=1, help='save checkpoint frequency')
 parser.add_argument('--eval_freq', type=int, default=1, help='eval freq')
 
@@ -69,7 +70,8 @@ parser.add_argument('--rt', action='store_true',help='robust training')
 
 parser.add_argument('--max_h', type=int, default=864, help='testing max h')
 parser.add_argument('--max_w', type=int, default=1152, help='testing max w')
-parser.add_argument('--use_raw_train', action='store_true',help='using 1200x1600 training')
+# parser.add_argument('--use_raw_train',default=False, action='store_true',help='using 1200x1600 training')
+parser.add_argument('--use_raw_train',default=False,help='using 1200x1600 training')
 parser.add_argument('--mono', action='store_true',help='query to build mono depth prediction and loss')
 parser.add_argument('--lr_scheduler', type=str, default='MS')
 parser.add_argument('--ASFF', action='store_true')
@@ -77,7 +79,8 @@ parser.add_argument('--attn_temp', type=float, default=2)
 
 
 num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
-is_distributed = num_gpus > 1
+# is_distributed = num_gpus > 1
+is_distributed = False
 
 # main function
 def train(model, model_loss, optimizer, TrainImgLoader, TestImgLoader, start_epoch, args):
@@ -392,13 +395,14 @@ if __name__ == '__main__':
         )
     else:
         if torch.cuda.is_available():
-            print("Let's use", torch.cuda.device_count(), "GPUs!")
-            model = nn.DataParallel(model)
+            # print("Let's use", torch.cuda.device_count(), "GPUs!")
+            print("Let's use cuda0!")
+            # model = nn.DataParallel(model)
 
     # dataset, dataloader
     MVSDataset = find_dataset_def(args.dataset)
     if args.dataset.startswith('dtu'):
-        train_dataset = MVSDataset(args.trainpath, args.trainlist, "train", 5, args.interval_scale, rt=args.rt,  use_raw_train=args.use_raw_train)
+        train_dataset = MVSDataset(args.trainpath, args.trainlist, "train", 5, args.interval_scale, rt=args.rt,  use_raw_train=False)
         test_dataset = MVSDataset(args.testpath, args.testlist, "val", 5, args.interval_scale)
     elif args.dataset.startswith('blendedmvs'):
         train_dataset = MVSDataset(args.trainpath, args.trainlist, "train", 7, robust_train=args.rt)
@@ -415,9 +419,9 @@ if __name__ == '__main__':
         TestImgLoader = DataLoader(test_dataset, args.batch_size, sampler=test_sampler, num_workers=1, drop_last=False,
                                    pin_memory=args.pin_m)
     else:
-        TrainImgLoader = DataLoader(train_dataset, args.batch_size, shuffle=True, num_workers=1, drop_last=True,
+        TrainImgLoader = DataLoader(train_dataset, args.batch_size, shuffle=True, num_workers=0, drop_last=True,
                                     pin_memory=args.pin_m)
-        TestImgLoader = DataLoader(test_dataset, args.batch_size, shuffle=False, num_workers=1, drop_last=False,
+        TestImgLoader = DataLoader(test_dataset, args.batch_size, shuffle=False, num_workers=0, drop_last=False,
                                    pin_memory=args.pin_m)
 
 

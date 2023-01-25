@@ -2,3 +2,5 @@ outputs/
 checkpoints/
 debug_figs/
 *__pycache__
+.idea
+

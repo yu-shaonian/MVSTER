@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-DTU_TRAINING="/mnt/cfs/algorithm/public_data/mvs/mvs_training/dtu"
+DTU_TRAINING= "/home/leiguojun/data/mvs_training/dtu"
 DTU_TRAINLIST="lists/dtu/train.txt"
 DTU_TESTLIST="lists/dtu/test.txt"
 

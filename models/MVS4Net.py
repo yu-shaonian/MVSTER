@@ -62,6 +62,10 @@ class MVS4net(nn.Module):
         depth_max = depth_values[:, -1].cpu().numpy()
         depth_interval = (depth_max - depth_min) / depth_values.size(1)
 
+        depth_interval = torch.from_numpy(depth_interval).to('cuda:0')
+        depth_values = depth_values.to('cuda:0')
+
+
         # step 1. feature extraction
         features = []
         for nview_idx in range(len(imgs)):  #imgs shape (B, N, C, H, W)
@@ -71,7 +75,9 @@ class MVS4net(nn.Module):
             scan_name = filename[0].split('/')[0]
             image_name = filename[0].split('/')[2][:-2]
             save_fn = './debug_figs/vis_mono/feat_{}'.format(scan_name+'_'+image_name)
-            feat_ = features[-1]['stage4'].detach().cpu().numpy()
+            # feat_ = features[-1]['stage4'].detach().cpu().numpy()
+            feat_ = features[-1]['stage4'].detach().cpu()
+            feat_ = feat_.numpy()
             np.save(save_fn, feat_)
         # step 2. iter (multi-scale)
         outputs = {}
@@ -95,7 +101,7 @@ class MVS4net(nn.Module):
                     depth_hypo = schedule_inverse_range(outputs_stage['inverse_min_depth'].detach(), outputs_stage['inverse_max_depth'].detach(), self.stage_splits[stage_idx], H, W)  # B D H W
                 else:
                     depth_hypo = schedule_range(outputs_stage['depth'].detach(), self.stage_splits[stage_idx], self.depth_interals_ratio[stage_idx] * depth_interval, H, W)
-
+                       # 注意outputs_stage['depth'].detach()在哪个位置
             outputs_stage = self.stagenet(features_stage, proj_matrices_stage, depth_hypo=depth_hypo, regnet=self.reg[stage_idx], stage_idx=stage_idx,
                                         group_cor=self.group_cor, group_cor_dim=self.group_cor_dim[stage_idx],
                                         split_itv=self.depth_interals_ratio[stage_idx],

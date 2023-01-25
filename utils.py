@@ -60,7 +60,8 @@ def tensor2numpy(vars):
 @make_recursive_func
 def tocuda(vars):
     if isinstance(vars, torch.Tensor):
-        return vars.to(torch.device("cuda"))
+        # return vars.to(torch.device("cuda:0"))
+        return vars.to("cuda:0")
     elif isinstance(vars, str):
         return vars
     else:

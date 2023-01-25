@@ -17,7 +17,8 @@ class MVSDataset(Dataset):
         self.interval_scale = interval_scale
         self.kwargs = kwargs
         self.rt = kwargs.get("rt", False)
-        self.use_raw_train = kwargs.get("use_raw_train", False)
+        # self.use_raw_train = kwargs.get("use_raw_train", False)
+        self.use_raw_train = False
         self.color_augment = transforms.ColorJitter(brightness=0.5, contrast=0.5)
 
         assert self.mode in ["train", "val", "test"]
